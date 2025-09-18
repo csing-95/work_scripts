@@ -27,7 +27,7 @@ def get_file_metadata(folder_path):
     return pd.DataFrame(data)
 
 if __name__ == "__main__":
-    folder_path = r"\\?\C:\Users\corri\Desktop\to_sort"
+    folder_path = r"\\?\filepath"
     output_file = "file_metadata.xlsx"
     
     # Get detailed metadata
@@ -68,3 +68,4 @@ if __name__ == "__main__":
         print(f"\nMetadata and summary exported to {output_file}")
         print(f"Total files: {total_files}")
         print(summary_counts)
+
