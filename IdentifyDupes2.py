@@ -2,7 +2,7 @@ import pandas as pd
 import re
 
 # ===== CONFIG =====
-file_path    = r"C:\Users\corri\Kinsmen Group\P25025 Plains Adept to Meridian Migration Project - Documents\6. Data Migration\Location Loadsheets\Masters\Working\014 - South Masters Loadsheet.xlsx"
+file_path    = r"filepath/filename.xlsx"
 sheet_name   = "Documents"
 output_sheet = "Dupe Decisions"
 
@@ -149,3 +149,4 @@ with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists="rep
     out.to_excel(w, sheet_name=output_sheet, index=False)
 
 print(f"Wrote '{output_sheet}' with keep/remove decisions, reasons, and conflict flags. Grouping: {GROUP_BY} - {file_path}")
+
