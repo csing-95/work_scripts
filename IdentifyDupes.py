@@ -52,6 +52,8 @@ def norm_text(s):
 
 # ===== Load =====
 df = pd.read_excel(file_path, sheet_name=sheet_name)
+print(f"Loaded {len(df)} rows from '{sheet_name}' - {file_path}")
+print("Now running duplicate-check process...")
 
 # Preserve original order
 df["_orig_order"] = range(len(df))
