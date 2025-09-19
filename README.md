@@ -3,7 +3,7 @@
 Finds duplicate files based on document name, filesize and revision - [Link](https://github.com/csing-95/work_scripts/blob/main/IdentifyDupes.py)
 
 ### 02 - Propagate Rendition Path Script   
-Propagates the rendition path columns - [Link](https://github.com/csing-95/work_scripts/blob/main/propagateRenditionPath.py)
+Propagates the rendition path columns based on document number and revision number, falls back on legacy version number - [Link](https://github.com/csing-95/work_scripts/blob/main/propagateRenditionPath.py)
 
 ### 03 - Split Loadsheets Script   
 Splits loadsheet based on stack ID / document name. Give it the number of rows to split by and import code. - [Link](https://github.com/csing-95/work_scripts/blob/main/splitLoadsheet.py)
