@@ -232,7 +232,9 @@ def write_output_to_same_workbook(df_out: pd.DataFrame, workbook_path: str, outp
         df_out.to_excel(w, sheet_name=output_sheet, index=False)
 
 def run():
+    print("Starting rendition path propagation process...")
     df = pd.read_excel(WORKBOOK_PATH, sheet_name=INPUT_SHEET)
+    print(f"Loaded '{INPUT_SHEET}' from {WORKBOOK_PATH} with {len(df)} rows")
     df = normalize_df(df)
     df_out = apply_spreadsheet_updates(df, TARGET_EXTS)
 
