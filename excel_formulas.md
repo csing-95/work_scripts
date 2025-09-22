@@ -1,4 +1,5 @@
 ### For sheet number
+Extracts the last 2 digits from the document name (double check the output!)
 ```
 =LET(
   txt, [@[Document Name]],
@@ -10,7 +11,9 @@
   IF(AND(OR(hyps=3, hyps=4, hyps=5), ISNUMBER(--tail), LEN(tail)=2, rest=""), tail, ""))
 ```  
 
-### Sheet count
+### For sheet count
+Gets the last sheet number in the stack (double check the output!)
+Column A = Stack ID, AH = Sheet Number
 ```
 =LOOKUP(2,1/($A$2:$A$739=A2),$AH$2:$AH$739)
 ```
