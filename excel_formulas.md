@@ -1,5 +1,5 @@
 ### For sheet number
-Extracts the last 2 digits from the document name (double check the output!)
+Extracts the last 2 digits from the document name (Double check the output!)
 ```
 =LET(
   txt, [@[Document Name]],
@@ -12,23 +12,26 @@ Extracts the last 2 digits from the document name (double check the output!)
 ```  
 
 ### For sheet count
-Gets the last sheet number in the stack (double check the output!)
+Gets the last sheet number in the stack (Double check the output!)
 Column A = Stack ID, AH = Sheet Number
 ```
 =LOOKUP(2,1/($A$2:$A$739=A2),$AH$2:$AH$739)
 ```
 
 ### Check stack id for rendition review
+Column A = Stack ID, P = Rendition Path
 ```
 =A2 & ": " & IF(COUNTIFS(A:A,A2,P:P,"*Review*")>0,"Review","No Review")
 ```
 
 ### Formula for stack ID based on Document Number:
+This creates stack ID based on the document number
+Column E = Document number
 ```
 ="Stack_" & TEXT(MATCH(E2,UNIQUE($E$2:$E$31),0),"000")
 ```
 
-### Date formatting
+### Date formatting (Double check the date is the correct date and has formatted correctly)
 ```
 =IFERROR(LET(date,AQ8,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
 ```
