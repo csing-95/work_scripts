@@ -10,3 +10,7 @@ Splits loadsheet based on stack ID / document name. Give it the number of rows t
 
 ### 04 - Get Folder Info Script   
 Gets the metadata for files in a folder structure - [Link](https://github.com/csing-95/work_scripts/blob/main/getFolderInfo.py)
+
+
+### Excel Formulas
+Useful formulas i've used for transformation - [Link](https://github.com/csing-95/work_scripts/blob/main/excel_formulas.md)
