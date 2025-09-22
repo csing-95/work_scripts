@@ -20,5 +20,5 @@
 ### Date formatting
 =IFERROR(LET(date,AQ8,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
 
-### Turns letter into a decimal, good for reordering by revision number
+### Turns letter into a decimal, good for reordering by revision number if it goes into double digits (rev no. 10 can appear before 1)
 =CODE(RIGHT(A2,1))/100
