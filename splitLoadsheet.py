@@ -6,6 +6,7 @@ import pandas as pd
 from typing import List, Tuple, Dict, Optional
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.utils import get_column_letter
+from pandas.api.types import is_float_dtype
 
 # -----------------------------
 # Utilities (ports of your VBA)
@@ -24,25 +25,25 @@ def version_id_to_path(version_id: str) -> str:
         cont = (nib & 0x3)
         part4 = f"{int(version_id[1:6],16):X}{int(seg):X}00"
         path = os.sep + os.path.join(
-            f"{h1:X}",
-            f"{h2:X}",
-            f"{h3:X}",
-            part4,
-            f"cont.{cont}{version_id[7:9]}",
+            f"{h1:X}", f"{h2:X}", f"{h3:X}", part4, f"cont.{cont}{version_id[7:9]}",
         )
         return path
     except Exception:
         return ""
 
 # -----------------------------
+# Formatting config
+# -----------------------------
+DATE_FMT = "DD/MM/YYYY"
+FLOAT_FMT = "0.0############"   # keep at least one decimal
+LEGACY_DEC_COL = "Legacy Version Number"
+DATE_COLUMNS = {"Content Approved On", "Original Created On", "Content Reviewed On", "Due Date"}
+IGNORE_COLUMNS = {"Year", "Rev.", "Document-Type"}
+
+# -----------------------------
 # Chunk helpers
 # -----------------------------
 def _chunk_by_stack(df: pd.DataFrame, stack_col: str, target_size: int) -> Tuple[List[Tuple[int, int]], Dict[str, int]]:
-    """
-    Pack rows into chunks up to target_size WITHOUT splitting stacks.
-    Preserves original row order by first-appearance of stacks.
-    Returns list of (start_idx, end_idx) inclusive over df.index positions, plus diagnostics.
-    """
     blocks = []
     cur_stack = None
     start = None
@@ -51,16 +52,12 @@ def _chunk_by_stack(df: pd.DataFrame, stack_col: str, target_size: int) -> Tuple
     for i, sid in zip(df.index, df[stack_col]):
         sid_key = ("__NA__", i) if pd.isna(sid) else ("ID", sid)
         if cur_stack is None:
-            cur_stack = sid_key
-            start = i
-            last = i
+            cur_stack = sid_key; start = i; last = i
         elif sid_key == cur_stack:
             last = i
         else:
             blocks.append((cur_stack, start, last, last - start + 1))
-            cur_stack = sid_key
-            start = i
-            last = i
+            cur_stack = sid_key; start = i; last = i
     if cur_stack is not None:
         blocks.append((cur_stack, start, last, last - start + 1))
 
@@ -71,28 +68,70 @@ def _chunk_by_stack(df: pd.DataFrame, stack_col: str, target_size: int) -> Tuple
 
     for _, b_start, b_end, b_size in blocks:
         if running == 0:
-            chunk_start = b_start
-            chunk_end = b_end
-            running = b_size
+            chunk_start = b_start; chunk_end = b_end; running = b_size
         elif running + b_size <= target_size:
-            chunk_end = b_end
-            running += b_size
+            chunk_end = b_end; running += b_size
         else:
             chunks.append((chunk_start, chunk_end))
-            chunk_start = b_start
-            chunk_end = b_end
-            running = b_size
+            chunk_start = b_start; chunk_end = b_end; running = b_size
 
     if running > 0 and chunk_start is not None and chunk_end is not None:
         chunks.append((chunk_start, chunk_end))
 
     max_block = max((b[3] for b in blocks), default=0)
     oversized_blocks = [b for b in blocks if b[3] > target_size]
-    diagnostics = {
-        "max_stack_size": int(max_block),
-        "oversized_stack_count": int(len(oversized_blocks)),
-    }
+    diagnostics = {"max_stack_size": int(max_block), "oversized_stack_count": int(len(oversized_blocks))}
     return chunks, diagnostics
+
+# -----------------------------
+# Minimal type prep + formatting
+# -----------------------------
+def _prepare_chunk_types(df_chunk: pd.DataFrame) -> pd.DataFrame:
+    """
+    Only:
+      - coerce Legacy Version Number to numeric
+      - coerce DATE_COLUMNS to datetime (day-first)
+    Everything else is left untouched.
+    """
+    out = df_chunk.copy()
+
+    if LEGACY_DEC_COL in out.columns:
+        try:
+            out[LEGACY_DEC_COL] = pd.to_numeric(out[LEGACY_DEC_COL], errors="coerce")
+        except Exception:
+            pass
+
+    for col in (DATE_COLUMNS & set(out.columns)):
+        try:
+            out[col] = pd.to_datetime(out[col], dayfirst=True, errors="coerce")
+        except Exception:
+            pass
+
+    return out
+
+def _apply_excel_number_formats(ws, df_chunk: pd.DataFrame):
+    """
+    Only apply formats to:
+      - Legacy Version Number -> FLOAT_FMT
+      - DATE_COLUMNS -> DATE_FMT
+    """
+    cols = list(df_chunk.columns)
+
+    # Legacy Version Number
+    if LEGACY_DEC_COL in cols:
+        col_idx = cols.index(LEGACY_DEC_COL) + 1
+        letter = get_column_letter(col_idx)
+        # if it's numeric-like or has been coerced, set format anyway
+        if (LEGACY_DEC_COL in df_chunk and is_float_dtype(df_chunk[LEGACY_DEC_COL])) or True:
+            for row in range(2, ws.max_row + 1):
+                ws[f"{letter}{row}"].number_format = FLOAT_FMT
+
+    # Date columns
+    for col in (DATE_COLUMNS & set(cols)):
+        col_idx = cols.index(col) + 1
+        letter = get_column_letter(col_idx)
+        for row in range(2, ws.max_row + 1):
+            ws[f"{letter}{row}"].number_format = DATE_FMT
 
 # -----------------------------
 # Core logic
@@ -132,8 +171,7 @@ def split_import_sheets(source_xlsx: str, rows_per_sheet: int, base_name: str, i
         print(f"[INFO] Using stack-aware splitting on column: '{stack_col}' (stacks kept intact)")
         chunks, diag = _chunk_by_stack(df, stack_col, rows_per_sheet)
         if diag["oversized_stack_count"] > 0:
-            print(f"[WARN] {diag['oversized_stack_count']} stack(s) exceed target size "
-                  f"({rows_per_sheet}). They will be placed in their own (oversized) chunk.")
+            print(f"[WARN] {diag['oversized_stack_count']} stack(s) exceed target size ({rows_per_sheet}).")
         print(f"[INFO] Planned {len(chunks)} chunk(s) using stack packing.")
     else:
         print("[INFO] 'Stack ID' not found. Falling back to boundary extension by 'Document Number'.")
@@ -167,12 +205,18 @@ def split_import_sheets(source_xlsx: str, rows_per_sheet: int, base_name: str, i
         chunk[imp_col] = f"{imp_code_prefix}-{idx:03d}"
         print(f"[INFO] Applied Import Code: {imp_code_prefix}-{idx:03d}")
 
+        # Only prepare Legacy Version Number + DATE_COLUMNS
+        chunk_for_excel = _prepare_chunk_types(chunk)
+
         out_path = os.path.join(src_dir, f"{base_name}-{idx:03d}.xlsx")
         print(f"[INFO] Writing: {out_path}")
         with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
             sheet_name = "Documents"
-            chunk.to_excel(writer, index=False, sheet_name=sheet_name)
+            chunk_for_excel.to_excel(writer, index=False, sheet_name=sheet_name)
             ws = writer.sheets[sheet_name]
+
+            # Only format Legacy Version Number + DATE_COLUMNS
+            _apply_excel_number_formats(ws, chunk_for_excel)
 
             # create Excel Table over used range
             ref = f"A1:{get_column_letter(ws.max_column)}{ws.max_row}"
@@ -220,11 +264,15 @@ if __name__ == "__main__":
     print(" Split Import Sheets (interactive mode) ")
     print("=" * 60)
 
+    # helpers to tidy pasted inputs (remove surrounding quotes)
+    def _clean_input(s: str) -> str:
+        return s.strip().strip('"').strip("'")
+
     # Source path
-    src = input("Path to source Excel file: ").strip()
+    src = _clean_input(input("Path to source Excel file: "))
     while not does_exist(src):
         print("[ERROR] File not found, try again.")
-        src = input("Path to source Excel file: ").strip()
+        src = _clean_input(input("Path to source Excel file: "))
 
     # Rows per sheet
     while True:
@@ -234,17 +282,17 @@ if __name__ == "__main__":
             break
         print("[ERROR] Please enter a positive integer.")
 
-    # Base name
-    base = input("Base name for output files (e.g. MyFile): ").strip()
+    # Base name (trim quotes if pasted)
+    base = _clean_input(input("Base name for output files (e.g. MyFile): "))
     while not base:
         print("[ERROR] Base name cannot be empty.")
-        base = input("Base name for output files (e.g. MyFile): ").strip()
+        base = _clean_input(input("Base name for output files (e.g. MyFile): "))
 
-    # Import code prefix
-    imp = input("Import code prefix (e.g. IMP20250918): ").strip()
+    # Import code prefix (trim quotes if pasted)
+    imp = _clean_input(input("Import code prefix (e.g. IMP20250918): "))
     while not imp:
         print("[ERROR] Import code prefix cannot be empty.")
-        imp = input("Import code prefix (e.g. IMP20250918): ").strip()
+        imp = _clean_input(input("Import code prefix (e.g. IMP20250918): "))
 
     try:
         split_import_sheets(src, rows, base, imp)

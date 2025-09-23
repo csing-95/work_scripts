@@ -34,6 +34,7 @@ Column E = Document number
 ### Date formatting (Double check the date is the correct date and has formatted correctly)
 ```
 =IFERROR(LET(date,AQ8,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
+=IFERROR(LET(date,AD2,TEXT(DATE(LEFT(date,4),MID(date,5,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
 ```
 
 ### Turns letter into a decimal, good for reordering by revision number if it goes into double digits (rev no. 10 can appear before 1)
