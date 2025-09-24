@@ -41,3 +41,8 @@ Column E = Document number
 ```
 =CODE(RIGHT(A2,1))/100
 ```
+
+### For making digit 1 -> 01
+```
+=IF(LEN([@[Sheet Number]])=1,"0"&[@[Sheet Number]],[@[Sheet Number]]) &""
+```
