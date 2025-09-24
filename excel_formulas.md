@@ -46,3 +46,13 @@ Column E = Document number
 ```
 =IF(LEN([@[Sheet Number]])=1,"0"&[@[Sheet Number]],[@[Sheet Number]]) &""
 ```
+
+### Pulling latest revision from stack in Masters
+BY = Title 4 (Document Number from Projects), I = Revision number, H = Title 4 (Document Number from Masters)
+```
+=LET(
+ stack, BY6,
+ revs, FILTER('[007 - Wascana Masters Loadsheet.xlsx]Documents'!I$2:I$255, '[007 - Wascana Masters Loadsheet.xlsx]Documents'!H$2:H$255=stack),
+ INDEX(revs, COUNTA(revs))
+)
+```
