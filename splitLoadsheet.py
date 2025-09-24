@@ -39,6 +39,10 @@ FLOAT_FMT = "0.0############"   # keep at least one decimal
 LEGACY_DEC_COL = "Legacy Version Number"
 DATE_COLUMNS = {"Content Approved On", "Original Created On", "Content Reviewed On", "Due Date"}
 IGNORE_COLUMNS = {"Year", "Rev.", "Document-Type"}
+TEXT_PAD_COLUMNS = {
+    "Sheet Number": 2,      # always 2 digits (01, 02, ...)
+    "Document-Type": 3      # always 3 digits (001, 010, ...)
+}
 
 # -----------------------------
 # Chunk helpers
@@ -88,10 +92,9 @@ def _chunk_by_stack(df: pd.DataFrame, stack_col: str, target_size: int) -> Tuple
 # -----------------------------
 def _prepare_chunk_types(df_chunk: pd.DataFrame) -> pd.DataFrame:
     """
-    Only:
-      - coerce Legacy Version Number to numeric
-      - coerce DATE_COLUMNS to datetime (day-first)
-    Everything else is left untouched.
+    - coerce Legacy Version Number to numeric
+    - coerce DATE_COLUMNS to datetime (day-first)
+    - pad Sheet Number (2 digits) and Document-Type (3 digits)
     """
     out = df_chunk.copy()
 
@@ -107,13 +110,42 @@ def _prepare_chunk_types(df_chunk: pd.DataFrame) -> pd.DataFrame:
         except Exception:
             pass
 
+    # # Pad numeric-looking text columns
+    # for col, width in TEXT_PAD_COLUMNS.items():
+    #     if col in out.columns:
+    #         try:
+    #             out[col] = (
+    #                 out[col]
+    #                 .astype("Int64")
+    #                 .astype(str)
+    #                 .str.zfill(width)
+    #             )
+    #         except Exception:
+    #             out[col] = out[col].astype(str).str.zfill(width)
+
+    # Pad numeric-looking text columns
+    for col, width in TEXT_PAD_COLUMNS.items():
+        if col in out.columns:
+            def pad_val(v):
+                if pd.isna(v):        # true NaN / None
+                    return ""
+                s = str(v).strip()
+                if s == "" or s.upper() == "<NA>":
+                    return ""
+                try:
+                    n = int(float(s))
+                    return str(n).zfill(width)
+                except Exception:
+                    return s.zfill(width) if s.isdigit() else s
+            out[col] = out[col].map(pad_val)
+
     return out
 
 def _apply_excel_number_formats(ws, df_chunk: pd.DataFrame):
     """
-    Only apply formats to:
-      - Legacy Version Number -> FLOAT_FMT
-      - DATE_COLUMNS -> DATE_FMT
+    - Legacy Version Number -> FLOAT_FMT
+    - DATE_COLUMNS -> DATE_FMT
+    - Text padded columns -> force text format
     """
     cols = list(df_chunk.columns)
 
@@ -121,7 +153,6 @@ def _apply_excel_number_formats(ws, df_chunk: pd.DataFrame):
     if LEGACY_DEC_COL in cols:
         col_idx = cols.index(LEGACY_DEC_COL) + 1
         letter = get_column_letter(col_idx)
-        # if it's numeric-like or has been coerced, set format anyway
         if (LEGACY_DEC_COL in df_chunk and is_float_dtype(df_chunk[LEGACY_DEC_COL])) or True:
             for row in range(2, ws.max_row + 1):
                 ws[f"{letter}{row}"].number_format = FLOAT_FMT
@@ -132,6 +163,13 @@ def _apply_excel_number_formats(ws, df_chunk: pd.DataFrame):
         letter = get_column_letter(col_idx)
         for row in range(2, ws.max_row + 1):
             ws[f"{letter}{row}"].number_format = DATE_FMT
+
+    # Force text format for padded text columns
+    for col in (TEXT_PAD_COLUMNS.keys() & set(cols)):
+        col_idx = cols.index(col) + 1
+        letter = get_column_letter(col_idx)
+        for row in range(2, ws.max_row + 1):
+            ws[f"{letter}{row}"].number_format = "@"
 
 # -----------------------------
 # Core logic
@@ -205,7 +243,7 @@ def split_import_sheets(source_xlsx: str, rows_per_sheet: int, base_name: str, i
         chunk[imp_col] = f"{imp_code_prefix}-{idx:03d}"
         print(f"[INFO] Applied Import Code: {imp_code_prefix}-{idx:03d}")
 
-        # Only prepare Legacy Version Number + DATE_COLUMNS
+        # Prepare data types and formatting
         chunk_for_excel = _prepare_chunk_types(chunk)
 
         out_path = os.path.join(src_dir, f"{base_name}-{idx:03d}.xlsx")
@@ -215,7 +253,6 @@ def split_import_sheets(source_xlsx: str, rows_per_sheet: int, base_name: str, i
             chunk_for_excel.to_excel(writer, index=False, sheet_name=sheet_name)
             ws = writer.sheets[sheet_name]
 
-            # Only format Legacy Version Number + DATE_COLUMNS
             _apply_excel_number_formats(ws, chunk_for_excel)
 
             # create Excel Table over used range
@@ -264,17 +301,14 @@ if __name__ == "__main__":
     print(" Split Import Sheets (interactive mode) ")
     print("=" * 60)
 
-    # helpers to tidy pasted inputs (remove surrounding quotes)
     def _clean_input(s: str) -> str:
         return s.strip().strip('"').strip("'")
 
-    # Source path
     src = _clean_input(input("Path to source Excel file: "))
     while not does_exist(src):
         print("[ERROR] File not found, try again.")
         src = _clean_input(input("Path to source Excel file: "))
 
-    # Rows per sheet
     while True:
         rows_str = input("How many rows per sheet? ").strip()
         if rows_str.isdigit() and int(rows_str) > 0:
@@ -282,13 +316,11 @@ if __name__ == "__main__":
             break
         print("[ERROR] Please enter a positive integer.")
 
-    # Base name (trim quotes if pasted)
     base = _clean_input(input("Base name for output files (e.g. MyFile): "))
     while not base:
         print("[ERROR] Base name cannot be empty.")
         base = _clean_input(input("Base name for output files (e.g. MyFile): "))
 
-    # Import code prefix (trim quotes if pasted)
     imp = _clean_input(input("Import code prefix (e.g. IMP20250918): "))
     while not imp:
         print("[ERROR] Import code prefix cannot be empty.")
