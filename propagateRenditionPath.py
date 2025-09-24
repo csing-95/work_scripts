@@ -7,7 +7,8 @@ import pandas as pd
 from openpyxl import load_workbook
 
 # ========= CONFIG =========
-WORKBOOK_PATH = r"filepath/filename.xlsx"
+# WORKBOOK_PATH = r"filepath/filename.xlsx"
+WORKBOOK_PATH = r"C:\Users\corri\Kinsmen Group\P25025 Plains Adept to Meridian Migration Project - Documents\6. Data Migration\Location Loadsheets\Projects\Working\000 - Plains Midstream Canada Projects Loadsheet.xlsx"
 INPUT_SHEET   = "Documents"
 OUTPUT_SHEET  = "Rendition_Actions"
 TARGET_EXTS   = ["dwg", "doc", "docx", "xls", "xlsm", "xlsx", "gp4"]
