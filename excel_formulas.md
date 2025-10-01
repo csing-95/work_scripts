@@ -56,3 +56,31 @@ BY = Title 4 (Document Number from Projects), I = Revision number, H = Title 4 (
  INDEX(revs, COUNTA(revs))
 )
 ```
+
+### Identifies XREFS based on document number and if there are strings in it
+```
+=IF(AND(SUMPRODUCT(LEN(I8)-LEN(SUBSTITUTE(UPPER(I8),CHAR(ROW(INDIRECT("65:90"))),"")))>1,ISERROR(SEARCH("95019",I8))),"XREF","")
+```
+OR
+```
+=IF(
+  ISNUMBER(SEARCH("3D MODEL", V2)),
+  "XREF 3D MODEL",
+  IF(
+    OR(
+      ISNUMBER(SEARCH("xref", V2)),
+      ISNUMBER(SEARCH("x ref", V2)),
+      ISNUMBER(SEARCH("x-ref", V2))
+    ),
+    "XREF TITLE",
+    IF(
+      AND(
+        SUMPRODUCT(LEN(H2)-LEN(SUBSTITUTE(UPPER(H2),CHAR(ROW(INDIRECT("65:90"))),""))) > 1,
+        ISERROR(SEARCH("95019", H2))
+      ),
+      "XREF PROP",
+      ""
+    )
+  )
+)
+```
