@@ -2,8 +2,10 @@ import pandas as pd
 import re
 
 # ===== CONFIG =====
+
 # file_path    = r"filepath/filename.xlsx"
-file_path    = r"C:\Users\corri\Kinsmen Group\P25025 Plains Adept to Meridian Migration Project - Documents\6. Data Migration\Location Loadsheets\Projects\Working\000 - Plains Midstream Canada Projects Loadsheet.xlsx"
+file_path    = r"C:\Users\corri\Kinsmen Group\P25025 Plains Adept to Meridian Migration Project - Documents\6. Data Migration\Location Loadsheets\Archives\Working Loadsheets\Legacy Masters\001 - Manito Pipeline System Archive Masters Legacy.xlsx"
+
 sheet_name   = "Documents"
 output_sheet = "Dupe Decisions"
 
