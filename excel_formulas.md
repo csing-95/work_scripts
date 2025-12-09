@@ -16,6 +16,7 @@ Gets the last sheet number in the stack (Double check the output!)
 Column A = Stack ID, AH = Sheet Number
 ```
 =LOOKUP(2,1/($A$2:$A$739=A2),$AH$2:$AH$739)
+=XLOOKUP(A2, A:A, AO:AO, "", 0, -1)
 ```
 
 ### Check stack id for rendition review
@@ -33,8 +34,19 @@ Column E = Document number
 
 ### Date formatting (Double check the date is the correct date and has formatted correctly)
 ```
-=IFERROR(LET(date,AQ8,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
-=IFERROR(LET(date,AD2,TEXT(DATE(LEFT(date,4),MID(date,5,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
+for dates formatted yyyy/mm/dd:
+=IFERROR(if(AR2="", "", LET(date,AQ8,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy"))),"review")
+=IFERROR(LET(date,ac2,TEXT(DATE(LEFT(date,4),MID(date,6,2),RIGHT(date,2)),"dd/mm/yyyy")),"")
+
+for dates formatted  xx:
+=IFERROR(IF(AR2="", "",LET(date,AR2,TEXT(DATE(LEFT(date,4),MID(date,5,2),RIGHT(date,2)),"dd/mm/yyyy"))),"review")
+
+for dates formatted: mm/dd/yy
+=IFERROR(LET(
+    date, AF73,
+    TEXT(DATE(2000 + RIGHT(date,2), LEFT(date,2), MID(date,4,2)), "dd/mm/yyyy")
+), "review")
+
 ```
 
 ### Turns letter into a decimal, good for reordering by revision number if it goes into double digits (rev no. 10 can appear before 1)
@@ -55,4 +67,49 @@ BY = Title 4 (Document Number from Projects), I = Revision number, H = Title 4 (
  revs, FILTER('[007 - Wascana Masters Loadsheet.xlsx]Documents'!I$2:I$255, '[007 - Wascana Masters Loadsheet.xlsx]Documents'!H$2:H$255=stack),
  INDEX(revs, COUNTA(revs))
 )
+```
+
+### Identifying XREFS from title and document name/number
+```
+=IF(
+  ISNUMBER(SEARCH("3D MODEL", V2)),
+  "XREF 3D MODEL",
+  IF(
+    OR(
+      ISNUMBER(SEARCH("xref", V2)),
+      ISNUMBER(SEARCH("x ref", V2)),
+      ISNUMBER(SEARCH("x-ref", V2))
+    ),
+    "XREF TITLE",
+    IF(
+      AND(
+        SUMPRODUCT(LEN(H2)-LEN(SUBSTITUTE(UPPER(H2),CHAR(ROW(INDIRECT("65:90"))),""))) > 1,
+        ISERROR(SEARCH("95019", H2))
+      ),
+      "XREF PROP",
+      ""
+    )
+  )
+)
+```
+
+### Formatting Revision numbers with legacy revs numbers(0.0)
+```
+=IFERROR(IF(F2="False", CONCAT(I2, "(", K2, ")"),I2),"")
+```
+
+### Identify dupe stacks with hybrid issues (will slow down if large dataset)
+```
+=IF(SUMPRODUCT(($A$2:$A$9999=A9)*(COUNTIFS($G$2:$G$9999,$G$2:$G$9999)>1))>0,
+    "Dupe stack",
+    ""
+)
+
+-------------
+
+Step 1: (g=document number+rev no.):
+=COUNTIF($g:$g, g2) > 1
+
+Step 2 (j=column used for step 1): 
+=COUNTIFS($A:$A, a2, $J:$J, TRUE) > 0
 ```
