@@ -1,4 +1,6 @@
 # split_import_sheets.py
+# tool for splitting a large Excel sheet into multiple smaller sheets for import,
+# keeping stacks intact where possible and applying import codes. 
 import sys
 import os
 import time
