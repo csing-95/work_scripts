@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# tool for propagating rendition paths from PDFs to target documents in a spreadsheet
+
 from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional
@@ -7,7 +9,14 @@ import pandas as pd
 from openpyxl import load_workbook
 
 # ========= CONFIG =========
+<<<<<<< Updated upstream
 WORKBOOK_PATH = r"filepath/filename.xlsx"
+=======
+
+# WORKBOOK_PATH = r"filepath/filename.xlsx"
+WORKBOOK_PATH = r"C:\Users\corri\Kinsmen Group\P25025 Plains Adept to Meridian Migration Project - Documents\6. Data Migration\PROD Location Loadsheets\Masters\Data Issues\Batch 21\Batch 21 Fixes.xlsx"
+
+>>>>>>> Stashed changes
 INPUT_SHEET   = "Documents"
 OUTPUT_SHEET  = "Rendition_Actions"
 TARGET_EXTS   = ["dwg", "doc", "docx", "xls", "xlsm", "xlsx", "gp4"]
